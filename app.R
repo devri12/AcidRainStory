@@ -82,21 +82,51 @@ w6chem$SiO2.precip <- w6chem$SiO2.precip * 1000 * 1 / 60.080 #Net charge?
 #?put each compound into one row
   #w6chem <- cbind(w6chem$Ca.flow, w6chem$Ca.precip)
 
-#split date then aggregate SO4 by year to simplify/clarify the graphs
+#split date 
 as.character(w6chem$date)
 w6chemsplit <- separate(w6chem, col = date, into = c("year", "month", "day"), sep = "/")
-SO4.precip.year <- group_by(w6chemsplit, year)%>%
-  summarise_each(funs(sum), SO4.precip)%>%
-  as.data.frame
-SO4.flow.year <- group_by(w6chemsplit, year)%>%
-  summarise_each(funs(sum), SO4.flow)%>%
-  as.data.frame
-SO4.year <- merge(SO4.precip.year, SO4.flow.year, by = "year")
-#add on /m/d to get line graph
-SO4.year$year <- as.character(SO4.year$year)
-SO4.year['year'] <- apply(SO4.year[, 'year', drop = F], 2, function(x){paste0(x, '/06/01')})
-as.Date(SO4.year$year)
-#SO4.year <- SO4.year[-c(1),]
+#add year column for later granularity interactive manipulation
+w6chem$year <- w6chemsplit$year
+#move the pH values to end of the table so they don't get aggregated
+w6chem <- w6chem[, c(1:9, 11:22, 24:28, 10, 23, 29)]
+#aggregate by year column to get yearly averages
+w6chemyear <- group_by(w6chem, year) %>%
+  summarise_each(funs(sum), flow:SiO2.precip)#this works great..
+#format new year column as date in both w6chemyear AND in w6chem
+w6chemyear$year <- as.character(w6chemyear$year)
+w6chemyear['year'] <- apply(w6chemyear[, 'year', drop = F], 2, function(x){paste0(x, '/06/01')})
+as.Date(w6chemyear$year)
+
+w6chem$year <- as.character(w6chem$year)
+w6chem['year'] <- apply(w6chem[, 'year', drop = F], 2, function(x){paste0(x, '/06/01')})
+as.Date(w6chem$year)
+#rename all vars to have 'yearly' before merging
+w6chemyear <- plyr::rename(w6chemyear, c("Ca.precip" = "Ca.precipyear",
+                            "Mg.precip" = "Mg.precipyear",
+                            "K.precip" = "K.precipyear",
+                            "Na.precip" = "Na.precipyear",
+                            "Al.precip" = "Al.precipyear",
+                            "NH4.precip" = "NH4.precipyear",
+                            "SO4.precip" = "SO4.precipyear",
+                            "NO3.precip" = "NO3.precipyear",
+                            "Cl.precip" = "Cl.precipyear",
+                            "PO4.precip" = "PO4.precipyear",
+                            "SiO2.precip" = "SiO2.precipyear",
+                            "Ca.flow" = "Ca.flowyear",
+                            "Mg.flow" = "Mg.flowyear",
+                            "K.flow" = "K.flowyear",
+                            "Na.flow" = "Na.flowyear",
+                            "Al.flow" = "Al.flowyear",
+                            "NH4.flow" = "NH4.flowyear",
+                            "SO4.flow" = "SO4.flowyear",
+                            "NO3.flow" = "NO3.flowyear",
+                            "Cl.flow" = "Cl.flowyear",
+                            "PO4.flow" = "PO4.flowyear",
+                            "SiO2.flow" = "SiO2.flowyear",
+                            "flow" = "flowyear",
+                            "precip" = "precipyear"))
+#now add these columns to w6chem
+w6chemDandY <- merge(w6chem, w6chemyear, by = "year")
 
 #make w6chem a date again
 w6chem$date <- as.Date(w6chem$date)
@@ -106,6 +136,12 @@ ui <- fluidPage(
   titlePanel(h1(strong("Acid Rain & HBEF"))),
     sidebarLayout(
       sidebarPanel(
+        #switch between monthly and yearly data
+        selectInput("selDate", label = "Timescale granularity",
+                    choices = c("Monthly" = "date", "Yearly" = "year")),
+        #make an if-statement to have the radio buttons use yearly vs monthly data!!
+
+        #radioButtons to select compounds - try to pair up P&Q on same graph
       radioButtons("rbP1", label = "Choose a first precipitation compound",
                    choices = c("SO4" = "SO4.precip", "Mg" = "Mg.precip", "K" = "K.precip", 
                                "Na" = "Na.precip", "Al" = "Al.precip", "NH4" = "NH4.precip", 
@@ -130,37 +166,44 @@ ui <- fluidPage(
                                "SiO2" = "SiO2.flow", "SO4" = "SO4.flow"))
       ),
       mainPanel(
-      plotOutput("cmpd1"), plotOutput("cmpd2"),
-      plotOutput("static")
+        #use slider to view data in specific time ranges
+        sliderInput("dateSlide", label = "Input date range",
+                    min = as.Date("1963/06/01"), 
+                    max = as.Date("2013/06/01"),
+                    value = c(as.Date("1963/06/01"), as.Date("2013/06/01")),
+                    timeFormat="%b %Y"),
+      plotOutput("cmpd1"), plotOutput("cmpd2")
+#      ,plotOutput("static")
       )
   )
 )
 
 #shiny app commands (server)
 server <- function(input, output) {
-  #?make if statement based on rb input in order to graph P and Q
+  #ie if selDate = Monthly use Ca.precip, else use Ca.precipyear
+  output$ifButtons <- reactiveText({
+  if(input$selDate = "Monthly") {
+    p("Monthly")
+  }else{
+    p("Yearly")
+  }
+  })
     #plot of P and Q from one compound
     output$cmpd1 <- renderPlot({
-    ggplot(w6chem, aes(x = as.Date(date)))+
+    ggplot(w6chemDandY, aes(x = as.Date(get(input$selDate))))+
       geom_line(aes(y = get(input$rbP1), col = "Precip"))+ #maybe make Ca, Na, K, etc. columns&
       geom_line(aes(y = get(input$rbQ1), col = "Discharge"))+ # group.by source within the cmpd?
-      labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")
+      labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")+
+      xlim(min(input$dateSlide[1]), max(input$dateSlide[2])) #use the date slider to change x axis
   })
     #plot of P and Q from another compound
     output$cmpd2 <- renderPlot({
     ggplot(w6chem, aes(x = as.Date(date)))+
       geom_line(aes(y = get(input$rbP2), col = "Precip"))+
       geom_line(aes(y = get(input$rbQ2), col = "Discharge"))+
-      labs(colour = "Source", x = "Year", y = "Second compound (ueq/L)")
+      labs(colour = "Source", x = "Year", y = "Second compound (ueq/L)")+
+      xlim(min(input$dateSlide[1]), max(input$dateSlide[2]))
   })
-    output$static <- renderPlot({
-      ggplot(SO4.year, aes(x = as.Date(year)))+
-        geom_smooth(aes(y = SO4.flow, col = "discharge"), se = F)+
-        geom_smooth(aes(y = SO4.precip, col = "precipitation"), se = F)+
-        labs(colour = "Source", x = "Year", y = "SO4 (ueq/L)")+
-        theme_light()+
-        ggtitle("SO4 concentration over time")
-    })
 }
 
 #call shiny app
