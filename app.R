@@ -77,11 +77,6 @@ w6chem$Cl.precip <- w6chem$Cl.precip * 1000 * 1 / 35.450 #negative charge
 w6chem$PO4.precip <- w6chem$PO4.precip * 1000 * 3 / 94.971 #negative charge
 w6chem$SiO2.precip <- w6chem$SiO2.precip * 1000 * 1 / 60.080 #Net charge?
 
-#?put precip and flow into one column "source" in order to group.by
-
-#?put each compound into one row
-  #w6chem <- cbind(w6chem$Ca.flow, w6chem$Ca.precip)
-
 #split date 
 as.character(w6chem$date)
 w6chemsplit <- separate(w6chem, col = date, into = c("year", "month", "day"), sep = "/")
@@ -131,15 +126,17 @@ w6chemDandY <- merge(w6chem, w6chemyear, by = "year")
 #make w6chem a date again
 w6chem$date <- as.Date(w6chem$date)
 
+#?put precip and flow into one column "source" in order to group.by
+
+#?put each compound into one row
+#w6chem <- cbind(w6chem$Ca.flow, w6chem$Ca.precip)
+
+
 #shiny app interface (ui)
 ui <- fluidPage(
   titlePanel(h1(strong("Acid Rain & HBEF"))),
-    sidebarLayout(
-      sidebarPanel(
-        #switch between monthly and yearly data
-        selectInput("selDate", label = "Timescale granularity",
-                    choices = c("Monthly" = "date", "Yearly" = "year")),
-        #make an if-statement to have the radio buttons use yearly vs monthly data!!
+        fluidRow( column(4,
+               #make an if-statement to have the radio buttons use yearly vs monthly data!!
 
         #radioButtons to select compounds - try to pair up P&Q on same graph
       radioButtons("rbP1", label = "Choose a first precipitation compound",
@@ -151,7 +148,8 @@ ui <- fluidPage(
                    choices = c("SO4" = "SO4.flow", "Mg" = "Mg.flow", "K" = "K.flow", 
                                "Na" = "Na.flow", "Al" = "Al.flow", "NH4" = "NH4.flow",
                                "NO3" = "NO3.flow", "Cl" = "Cl.flow", "PO4" = "PO4.flow", 
-                               "SiO2" = "SiO2.flow", "Ca" = "Ca.flow", "pH" = "pH.flow")),
+                               "SiO2" = "SiO2.flow", "Ca" = "Ca.flow", "pH" = "pH.flow"))),
+      column(4,
       radioButtons("rbP2", label = "Choose a second precipitation compound",
                    choices = c("pH" = "pH.precip", "Ca" = "Ca.precip", "Mg" = "Mg.precip", 
                                "K" = "K.precip", 
@@ -163,34 +161,38 @@ ui <- fluidPage(
                                "K" = "K.flow", 
                                "Na" = "Na.flow", "Al" = "Al.flow", "NH4" = "NH4.flow",
                                "NO3" = "NO3.flow", "Cl" = "Cl.flow", "PO4" = "PO4.flow", 
-                               "SiO2" = "SiO2.flow", "SO4" = "SO4.flow"))
-      ),
-      mainPanel(
+                               "SiO2" = "SiO2.flow", "SO4" = "SO4.flow"))),
+      column(4,
         #use slider to view data in specific time ranges
         sliderInput("dateSlide", label = "Input date range",
                     min = as.Date("1963/06/01"), 
                     max = as.Date("2013/06/01"),
                     value = c(as.Date("1963/06/01"), as.Date("2013/06/01")),
                     timeFormat="%b %Y"),
-      plotOutput("cmpd1"), plotOutput("cmpd2")
-#      ,plotOutput("static")
-      )
-  )
+        #switch between monthly and yearly data
+        selectInput("selDate", label = "Timescale granularity",
+                    choices = c("Monthly" = "date", "Yearly" = "year"))),
+fluidRow(
+  column(12, plotOutput("cmpd1"))),
+fluidRow(
+  column(12, plotOutput("cmpd2"))
+)
+)
 )
 
 #shiny app commands (server)
 server <- function(input, output) {
-  #ie if selDate = Monthly use Ca.precip, else use Ca.precipyear
-  output$ifButtons <- reactiveText({
-  if(input$selDate = "Monthly") {
-    p("Monthly")
-  }else{
-    p("Yearly")
-  }
-  })
+  #ie if selDate = Monthly use Ca.precip for rbP1, else use Ca.precipyear for rbP1 ##FIX
+#  output$ifButtons <- reactiveText({
+ # if(input$selDate = "Monthly") {
+  #  p("Monthly")
+  #}else{
+   # p("Yearly")
+  #}
+  #})
     #plot of P and Q from one compound
     output$cmpd1 <- renderPlot({
-    ggplot(w6chemDandY, aes(x = as.Date(get(input$selDate))))+
+    ggplot(w6chem, aes(x = as.Date(date)))+
       geom_line(aes(y = get(input$rbP1), col = "Precip"))+ #maybe make Ca, Na, K, etc. columns&
       geom_line(aes(y = get(input$rbQ1), col = "Discharge"))+ # group.by source within the cmpd?
       labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")+
