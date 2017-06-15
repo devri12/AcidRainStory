@@ -4,6 +4,7 @@ library(dplyr)
 library(tidyr)
 library(readr)
 library(magrittr)
+library(ggiraph)
 
 w6precip <- read_csv("D:/Duke/Work(Environ)/Data/w6_precip_chem.txt")
 w6stream <- read_csv("D:/Duke/Work(Environ)/Data/w6_stream_chem.txt")
@@ -175,7 +176,9 @@ ui <- fluidPage(
 fluidRow(
   column(12, plotOutput("cmpd1"))),
 fluidRow(
-  column(12, plotOutput("cmpd2"))
+  column(12, plotOutput("cmpd2"))),
+fluidRow(
+  column(12, ggiraphOutput("my_gg"))
 )
 )
 )
@@ -206,7 +209,21 @@ server <- function(input, output) {
       labs(colour = "Source", x = "Year", y = "Second compound (ueq/L)")+
       xlim(min(input$dateSlide[1]), max(input$dateSlide[2]))
   })
+    output$my_gg <- renderggiraph({
+      g <- ggplot(w6chem, aes(x = as.Date(date)))+geom_line(aes(y = get(input$rbP1), col = "Precip"))+geom_line(aes(y = get(input$rbQ1), col = "Q"))
+
+      my_gg <- g +
+        geom_point_interactive(aes(y = get(input$rbP1), col = "Precip", tooltip = date, data_id = date), size = 6)+ 
+        geom_point_interactive(aes(y = get(input$rbQ1), col = "Q", tooltip = date, data_id = date), size = 7)+ 
+        labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")+
+      xlim(min(input$dateSlide[1]), max(input$dateSlide[2])) #use the date slider to change x axis
+      
+      ggiraph(code = print(my_gg), width = .8, width_svg = 45,
+              height_svg = 15, hover_css = "cursor:pointer;fill:black;stroke:black;")
+      
+    })
 }
 
 #call shiny app
 shinyApp(ui = ui, server = server)
+
