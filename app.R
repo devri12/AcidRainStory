@@ -174,9 +174,9 @@ ui <- fluidPage(
         selectInput("selDate", label = "Timescale granularity",
                     choices = c("Monthly" = "date", "Yearly" = "year"))),
 fluidRow(
-  column(12, plotOutput("cmpd1"))),
-fluidRow(
   column(12, plotOutput("cmpd2"))),
+fluidRow(
+  column(12, plotOutput("cmpd1"))),
 fluidRow(
   column(12, ggiraphOutput("my_gg"))
 )
@@ -199,7 +199,8 @@ server <- function(input, output) {
       geom_line(aes(y = get(input$rbP1), col = "Precip"))+ #maybe make Ca, Na, K, etc. columns&
       geom_line(aes(y = get(input$rbQ1), col = "Discharge"))+ # group.by source within the cmpd?
       labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")+
-      xlim(min(input$dateSlide[1]), max(input$dateSlide[2])) #use the date slider to change x axis
+      xlim(min(input$dateSlide[1]), max(input$dateSlide[2]))+ #use the date slider to change x axis
+      ggtitle("P vs Q for first elements")
   })
     #plot of P and Q from another compound
     output$cmpd2 <- renderPlot({
@@ -216,8 +217,16 @@ server <- function(input, output) {
         geom_point_interactive(aes(y = get(input$rbP1), col = "Precip", tooltip = date, data_id = date), size = 6)+ 
         geom_point_interactive(aes(y = get(input$rbQ1), col = "Q", tooltip = date, data_id = date), size = 7)+ 
         labs(colour = "Source", x = "Year", y = "First compound (ueq/L)")+
-      xlim(min(input$dateSlide[1]), max(input$dateSlide[2])) #use the date slider to change x axis
-      
+      xlim(min(input$dateSlide[1]), max(input$dateSlide[2]))+ #use the date slider to change x axis
+        theme(axis.title.x =  element_blank(),
+            axis.text.x  =  element_text(angle=0, vjust=0.5, size=30), 
+            axis.title.y = element_text(face="bold", size=35),
+            axis.text.y  = element_text(angle=0.3, vjust=0.5, size=30),
+            legend.title = element_text(size=40, face="bold"),
+            legend.text = element_text(size = 30),
+            plot.title = element_text(face="bold", size=55)) + 
+        ggtitle("P vs Q for first elements")
+
       ggiraph(code = print(my_gg), width = .8, width_svg = 45,
               height_svg = 15, hover_css = "cursor:pointer;fill:black;stroke:black;")
       
