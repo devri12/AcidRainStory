@@ -1,10 +1,11 @@
 library(ggplot2)
-library(ggiraph)
+library(plotly)
 library(shiny)
 library(dplyr)
 library(tidyr)
 library(readr)
 library(magrittr)
+library(timevis)
 
 shinyUI(
   fluidPage(theme = "Solar_bootstrap.min.css",
@@ -67,7 +68,7 @@ When they fall back to earth, in rain, snow, or even fog, it is called acid rain
                       neutralize acid rain (ie. Ca, Mg, K)")
              ),
              column(1)),
-    fluidRow(column(width = 12, offset = 2,
+    fluidRow(column(width = 10, offset = 2,
                     #use slider to view data in specific time ranges
                     sliderInput("dateSlide", label = "Input date range",
                                 min = as.Date("1963/06/01"), 
@@ -79,8 +80,18 @@ When they fall back to earth, in rain, snow, or even fog, it is called acid rain
                     #            choices = c("Monthly" = "date", "Yearly" = "year"))
     )
     ),
-    fluidRow(column(width = 12,
-                    ggiraphOutput("CaTime") #make this be able to switch between base cations
+    fluidRow(column(width = 11, offset = 1,
+                    plotlyOutput("CaTime", height = "auto"),#make this be able to switch between cmpds
+                    plotOutput("MgTime"),#probs should make an lapply for this or smthn
+                    plotOutput("KTime"),#also would be better if they could choose which ones to see
+                    plotOutput("NaTime"),
+                    plotOutput("AlTime"),
+                    plotOutput("NH4Time"),
+                    plotOutput("SO4Time"),
+                    plotOutput("NO3Time"),
+                    plotOutput("ClTime"),
+                    plotOutput("HTime")
+                    
     )),
     fluidRow(column(width = 8, offset = 1,
                     h3("One effect of the base cation loss was the poor growth of Sugar Maples, 
@@ -91,6 +102,41 @@ When they fall back to earth, in rain, snow, or even fog, it is called acid rain
                        these effects of acid rain, because the inflow is acidic when the outflow is 
                        much less so.  Acid is coming in, reacting, and staying.  Sounds like an 
                        unwelcome house guest.")),
+             column(3)),
+    fluidRow(column(width = 11, offset = 1,
+                    h2(strong("History/Policy")))),
+    fluidRow(column(width = 8, offset = 1,
+                    h3("The hydrologic dataset doesn’t begin until 1963 (which was after the onset 
+                       of acid rain) but it still captures the story of an increasing dilemma, 
+                       actions taken to mitigate it, and the rebalancing of the ecosystem.  Up 
+                       until this time, the United States government was just beginning to fund 
+                       research and small policies around air pollution.  In 1967 they began to 
+                       expand their monitoring and control, until the enactment of the Clean Air
+                       Act in 1970."),
+                    h3("The Clean Air Act was made to regulate emissions from both stationary sources 
+                       (like power plants) and mobile ones (like cars).  The EPA was also founded in
+                       1970 in order to enforce the new act.  There have since been amendments, in 
+                       1977 and 1990, with the 1990 ones specifically addressing the control of acid
+                       rain.  Since then, SO2 emissions have been declining because of mandatory 
+                       reductions, though NOx has been tougher to reduce.  Ecosystems aren’t 
+                       recovering as quickly as hoped, and efforts continue to both reduce emissions
+                       and mitigate ecological distress.")),
+             column(3)),
+    fluidRow(column(width = 11, offset = 1,
+                    timevisOutput("CAAetc"))),
+    fluidRow(column(width = 12, offset = 1,
+                    h2(strong("Take Action")))),
+    fluidRow(column(width = 8, offset = 1,
+                    h3("	Feeling stressed about nature?  Slightly overwhelmed?  If you’re a farmer, 
+                       you can reduce your nitrogen oxide in a number of ways, like timing the 
+                       nitrogen fertilization to crop demand.  For the rest of us?  The overemphasized
+                       carpooling, biking, or walking actually does help to reduce both nitrogen oxide
+                       and sulfur dioxide emissions from your vehicle.  Even switching over to more 
+                       energy efficient lightbulbs and appliances helps, because electricity is 
+                       produced in large part by burning fossil fuels.  If you’re feeling super 
+                       energized, you could even get a solar panel to produce some of your own 
+                       electricity use.  Now there’s a bright idea."),
+                    h3("")),
              column(3))
   )
 )
